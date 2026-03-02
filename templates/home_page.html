@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Focus Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+
+<style>
+/* Static gradient background */
+body {
+    margin: 0;
+    font-family: 'Patrick Hand', cursive;
+    height: 100vh;
+    display: flex;
+    background: linear-gradient(135deg, #87CEEB, #6a5acd, #00BFFF);
+    background-size: cover;
+    color: white;
+}
+
+/* Animated heading */
+.animated-title {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 50px;
+    padding: 20px 30px;
+    border: 5px solid #0418f7;
+    border-radius: 20px;
+    display: inline-block;
+    animation: rollTitle 3s ease-in-out infinite alternate;
+    background-color:#2bb763;
+    color: #0d0c12;
+    text-align: center;
+    margin-bottom: 20px;
+}
+@keyframes rollTitle {
+    from { transform: translateX(0px) rotate(0deg); border-radius:20px; background-color:#ffe4b5; }
+    to { transform: translateX(30px) rotate(15deg); border-radius:50px; background-color:#ffeb3b; }
+}
+
+/* Sidebar */
+.sidebar { width: 220px; padding: 20px; height: 100vh; background: rgba(0,0,0,0.2); }
+.sidebar h2 { margin-bottom: 30px; }
+.sidebar a { display:block; margin-bottom:15px; text-decoration:none; color:white; transition:0.3s; }
+.sidebar a:hover { color:#4CAF50; }
+
+/* Main content */
+.main { flex: 1; padding: 30px; }
+.dashboard-grid { display:grid; grid-template-columns:2fr 1fr; gap:25px; }
+
+/* Glass Card */
+.card {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+/* Buttons styling with playful animation */
+button {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 16px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    background: #6a5acd;
+    color: white;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+}
+button:hover {
+    transform: translateY(-3px) rotate(-2deg);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    background: #836fff;
+}
+button:active { transform: scale(0.95); }
+
+/* Sticky Notes */
+.task-input { display:flex; gap:10px; margin-bottom:15px; }
+.task-input input { flex:1; padding:10px; border-radius:8px; border:none; outline:none; font-family: 'Patrick Hand', cursive; }
+#taskList { list-style:none; padding:0; display:flex; flex-wrap: wrap; gap:10px; }
+#taskList li {
+    cursor: move;
+    padding:12px;
+    border-radius:10px;
+    display:flex;
+    flex-direction: column;
+    justify-content:space-between;
+    min-width:150px;
+    max-width:200px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    color:black;
+    transition: transform 0.2s;
+}
+#taskList li:hover { transform: translateY(-5px) rotate(-1deg); }
+#taskList li.completed span { text-decoration:line-through; opacity:0.6; }
+.sticky-color-1 { background:#FFEB3B; }
+.sticky-color-2 { background:#FFCDD2; }
+.sticky-color-3 { background:#C8E6C9; }
+.sticky-color-4 { background:#BBDEFB; }
+.sticky-color-5 { background:#D1C4E9; }
+
+/* Sticky note delete button */
+#taskList button { font-size:16px; background:none; border:none; color:#b71c1c; cursor:pointer; align-self:flex-start; }
+
+/* Settings input */
+.settings-input { width:80%; padding:8px; border-radius:6px; border:none; margin-bottom:10px; }
+
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Focus Tracker</h2>
+    <a href="{{ url_for('home', page='dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('home', page='analytics') }}">Analytics</a>
+    <a href="{{ url_for('home', page='settings') }}">Settings</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+</div>
+
+<div class="main">
+    <h1 class="animated-title">FocusForge 🔥</h1>
+    <h2>Welcome , {{ session['user'] }} 👋</h2>
+
+   {% if page == 'dashboard' %}
+    <div class="dashboard-grid">
+        <!-- Smart Timer -->
+        <div class="card">
+            <h2>⏳ Smart Timer</h2>
+            <div id="pomodoroTimer">
+                <div style="font-size:40px; margin-bottom:15px; text-align:center;" id="timerDisplay">25:00</div>
+                <div style="display:flex; justify-content:center; gap:10px;">
+                    <button onclick="startTimer()">Start</button>
+                    <button onclick="pauseTimer()">Pause</button>
+                    <button onclick="resetTimer()">Reset</button>
+                </div>
+                <div style="margin-top:15px; text-align:center;">
+                    <label>Focus (minutes): <input type="number" id="focusInput" value="25"></label>
+                    <label style="margin-left:10px;">Break (minutes): <input type="number" id="breakInput" value="5"></label>
+                    <button onclick="switchMode()" style="margin-left:10px;">Switch Mode</button>
+                </div>
+                <div style="margin-top:10px; text-align:center;">
+                    <strong>Mode:</strong> <span id="modeDisplay">Focus</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticky Notes -->
+        <div class="card">
+            <h2>🗒️ Sticky Notes</h2>
+            <div class="task-input">
+                <input type="text" id="taskInput" placeholder="Enter next focus task...">
+                <button onclick="addTask()">Add</button>
+            </div>
+            <ul id="taskList"></ul>
+        </div>
+    </div>
+
+    {% elif page == 'analytics' %}
+    <div class="card">
+    <h2>📊 Analytics</h2>
+
+    <p><strong>Total Focus Time:</strong> {{ analytics.total_time }} minutes</p>
+    <p><strong>Total Sessions:</strong> {{ analytics.total_sessions }}</p>
+
+    <form method="POST" action="/save_session">
+        <input type="number" name="duration" placeholder="Enter minutes focused" required>
+        <button type="submit">Add Session</button>
+    </form>
+</div>
+  
+<h3>Recent Sessions</h3>
+
+<ul>
+    {% for s in analytics.recent_sessions %}
+        <li>{{ s.duration }} minutes — {{ s.date }}</li>
+    {% endfor %}
+</ul>
+
+    {% elif page == 'settings' %}
+    <div class="card">
+        <h2>⚙️ Settings</h2>
+        <p>Customize your app:</p>
+        <label>Default Focus Time (minutes):</label>
+        <input class="settings-input" id="defaultFocus" type="number" value="25">
+        <label>Default Break Time (minutes):</label>
+        <input class="settings-input" id="defaultBreak" type="number" value="5">
+        <button onclick="saveSettings()">Save Settings</button>
+    </div>
+    {% endif %}
+
+<script>
+// Sticky Notes
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+function saveTasks(){ localStorage.setItem("tasks", JSON.stringify(tasks)); }
+function renderTasks(){
+    const taskList = document.getElementById("taskList");
+    if(!taskList) return;
+    taskList.innerHTML = "";
+    tasks.forEach((task,index)=>{
+        const li = document.createElement("li");
+        li.setAttribute("draggable", true);
+        if(task.completed) li.classList.add("completed");
+        if(!task.color){
+            const colors = ["sticky-color-1","sticky-color-2","sticky-color-3","sticky-color-4","sticky-color-5"];
+            task.color = colors[Math.floor(Math.random()*colors.length)];
+        }
+        li.classList.add(task.color);
+        li.innerHTML = `<div><input type="checkbox" ${task.completed?"checked":""} onchange="toggleTask(${index})"><span>${task.text}</span></div><button onclick="deleteTask(${index})">❌</button>`;
+        li.addEventListener('dragstart', (e)=>{ e.dataTransfer.setData("text/plain", index); });
+        taskList.appendChild(li);
+    });
+    saveTasks();
+}
+function addTask(){
+    const input = document.getElementById("taskInput");
+    if(input.value.trim()==="") return;
+    const today = new Date().toLocaleDateString();
+    tasks.push({text: input.value, completed: false, date: today});
+    input.value="";
+    renderTasks();
+}
+function toggleTask(index){ tasks[index].completed=!tasks[index].completed; if(tasks[index].completed) tasks[index].date=new Date().toLocaleDateString(); renderTasks(); }
+function deleteTask(index){ tasks.splice(index,1); renderTasks(); }
+
+const taskList = document.getElementById("taskList");
+taskList.addEventListener('dragover', e=> e.preventDefault());
+taskList.addEventListener('drop', e=>{
+    e.preventDefault();
+    const draggedIndex = e.dataTransfer.getData("text/plain");
+    const dropTarget = Array.from(taskList.children).indexOf(e.target.closest('li'));
+    if(dropTarget === -1) return;
+    const temp = tasks[draggedIndex];
+    tasks.splice(draggedIndex,1);
+    tasks.splice(dropTarget,0,temp);
+    renderTasks();
+});
+renderTasks();
+
+// Pomodoro Timer + Focus Minutes Tracking
+let timer;
+let totalSeconds = parseInt(document.getElementById("focusInput")?.value || 25) * 60;
+let isPaused = true;
+let isFocus = true;
+let focusSessions = JSON.parse(localStorage.getItem("focusSessions")) || {};
+const timerDisplay = document.getElementById("timerDisplay");
+const modeDisplay = document.getElementById("modeDisplay");
+
+function updateDisplay(){
+    const minutes=Math.floor(totalSeconds/60);
+    const seconds=totalSeconds%60;
+    if(timerDisplay) timerDisplay.textContent=`${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    if(modeDisplay) modeDisplay.textContent=isFocus?"Focus":"Break";
+}
+
+function startTimer(){
+    if(!isPaused) return;
+    isPaused=false;
+    timer=setInterval(()=>{
+        if(totalSeconds>0){ totalSeconds--; updateDisplay(); }
+        else{
+            clearInterval(timer);
+            if(isFocus){
+                const today=new Date().toLocaleDateString();
+                const minutesFocused=parseInt(document.getElementById("focusInput").value);
+                if(!focusSessions[today]) focusSessions[today]=0;
+                focusSessions[today]+=minutesFocused;
+                localStorage.setItem("focusSessions", JSON.stringify(focusSessions));
+            }
+            alert(isFocus?"Focus session over! Take a break 🛌":"Break is over! Back to focus 💪");
+            switchMode();
+            renderAnalytics();
+        }
+    },1000);
+}
+
+function pauseTimer(){ isPaused=true; clearInterval(timer); }
+function resetTimer(){
+    isPaused=true;
+    clearInterval(timer);
+    const inputMinutes=isFocus?parseInt(document.getElementById("focusInput").value):parseInt(document.getElementById("breakInput").value);
+    totalSeconds=inputMinutes*60;
+    updateDisplay();
+}
+function switchMode(){ isFocus=!isFocus; resetTimer(); }
+updateDisplay();
+
+// Analytics Chart
+function renderAnalytics(){
+    const chartCanvas = document.getElementById("tasksChart");
+    if(!chartCanvas) return;
+
+    const completedTasks = tasks.filter(t=>t.completed && t.date);
+    const taskCounts={};
+    completedTasks.forEach(t=>{ taskCounts[t.date]=(taskCounts[t.date]||0)+1; });
+
+    const focusData = focusSessions;
+    const allDates = Array.from(new Set([...Object.keys(taskCounts), ...Object.keys(focusData)])).sort();
+    const taskData = allDates.map(d=>taskCounts[d]||0);
+    const focusMinutesData = allDates.map(d=>focusData[d]||0);
+
+    new Chart(chartCanvas.getContext('2d'),{
+        type:'bar',
+        data:{ labels:allDates, datasets:[
+            {label:'Completed Tasks', data:taskData, backgroundColor:'#4CAF50'},
+            {label:'Focus Minutes', data:focusMinutesData, backgroundColor:'#2196F3'}
+        ]},
+        options:{ scales:{ y:{ beginAtZero:true } }, responsive:true, plugins:{ legend:{ position:'top' } } }
+    });
+}
+
+// Settings
+function saveSettings(){
+    const focusTime = parseInt(document.getElementById("defaultFocus").value);
+    const breakTime = parseInt(document.getElementById("defaultBreak").value);
+    if(!isNaN(focusTime)) localStorage.setItem("defaultFocus", focusTime);
+    if(!isNaN(breakTime)) localStorage.setItem("defaultBreak", breakTime);
+    alert("Settings saved!");
+}
+
+renderAnalytics();
+</script>
+
+</body>
+</html>
