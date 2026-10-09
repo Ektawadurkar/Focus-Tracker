@@ -1,11 +1,13 @@
 
+
 pipeline {
     agent any
 
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/Ektawadurkar/Focus-Tracker.git'
+                echo 'Repository already checked out by Jenkins.'
+                bat 'git branch'
             }
         }
 
@@ -16,3 +18,4 @@ pipeline {
         }
     }
 }
+
